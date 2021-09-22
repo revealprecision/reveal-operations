@@ -1,0 +1,10 @@
+{
+  "realm": "reveal",
+  "auth-server-url": "https://sso-dev.akros.online/auth/",
+  "ssl-required": "external",
+  "resource": "opensrp-server",
+  "credentials": {
+    "secret": "60426e60-221e-40a3-a72a-56aa560ab4d5"
+  },
+  "confidential-port": 0
+}

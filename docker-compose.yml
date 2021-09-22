@@ -1,0 +1,146 @@
+version: '3'
+
+services:
+
+#########################################################
+# BASE
+#########################################################
+
+  mariadb:
+    container_name: 'mariadb'
+    image: 'bitnami/mariadb:10.5'
+    ports:
+      - '3306:3306'
+    volumes:
+      - '${PWD}/data_mounts/mariadb_data:/bitnami/mariadb/data:rw'
+      - '${PWD}/data_mounts/mariadb_logs:/bitnami/mariadb/logs:rw'
+      - '${PWD}/conf/mariadb/my_config.cnf:/opt/bitnami/mariadb/conf/my.cnf:ro'
+    environment:
+      - 'MARIADB_ROOT_PASSWORD=not_so_secret'
+      - 'BITNAMI_DEBUG=true'
+
+  postgresql:
+    container_name: 'postgresql'
+    image: 'bitnami/postgresql:12.5.0'
+    ports:
+      - '5432:5432'
+    volumes:
+      - '${PWD}/data_mounts/postgres_data:/bitnami/postgresql:rw'
+      - '${PWD}/data_mounts/postgres_logs:/bitnami/postgresql/logs:rw'
+      - '${PWD}/conf/postgresql/postgresql.conf:/opt/bitnami/postgresql/conf/conf.d/postgresql.conf:ro'
+    environment:
+      - 'POSTGRESQL_PASSWORD=not_so_secret'
+      - 'BITNAMI_DEBUG=true'
+
+  redis:
+    container_name: 'redis'
+    image: 'redis:6.0.10'
+    ports:
+      - '6379:6379'
+    volumes:
+      - '${PWD}/data_mounts/redis_data:/data:rw'
+      - '${PWD}/data_mounts/redis_logs:/var/log/redis:rw'
+      - '${PWD}/conf/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro'
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+#########################################################
+# REVEAL
+#########################################################
+
+  keycloak:
+    container_name: 'keycloak'
+    image: 'jboss/keycloak:11.0.3'
+    depends_on:
+      - 'mariadb'
+    links:
+      - 'mariadb'
+    volumes:
+      - '${PWD}/conf/keycloak/standalone-ha.xml:/opt/jboss/keycloak/standalone/configuration/standalone-ha.xml:ro'
+      - '${PWD}/conf/keycloak/reveal-logo.png:/opt/jboss/keycloak/themes/keycloak/login/resources/img/keycloak-logo.png:ro'
+      - '${PWD}/conf/keycloak/reveal-logo.png:/opt/jboss/keycloak/themes/keycloak/login/resources/img/keycloak-logo-text.png:ro'
+      - '${PWD}/conf/keycloak/login.css:/opt/jboss/keycloak/themes/keycloak/login/resources/css/login.css:ro'
+      - '${PWD}/conf/keycloak/fonts:/opt/jboss/keycloak/themes/keycloak/login/resources/fonts:ro'
+      - '${PWD}/conf/keycloak/favicon.ico:/opt/jboss/keycloak/themes/keycloak/common/resources/img/favicon.ico:ro'
+    environment:
+      - KEYCLOAK_USER=admin
+      - KEYCLOAK_PASSWORD=not_so_secret
+      - DB_VENDOR=mariadb
+      - DB_ADDR=mariadb
+      - DB_USER=keycloak
+      - DB_PASSWORD=not_so_secret
+      - KEYCLOAK_LOGLEVEL=INFO
+      - PROXY_ADDRESS_FORWARDING=true
+
+  superset:
+    container_name: 'superset'
+    image: 'akros.azurecr.io/akros/superset:1'
+    depends_on:
+      - 'redis'
+    links:
+      - 'redis:redis'
+    volumes:
+      - '${PWD}/data_mounts/superset_data:/var/lib/superset:rw'
+      - '${PWD}/conf/superset/superset_config.py:/etc/superset/superset_config.py:ro'
+
+  opensrp-server:
+    container_name: 'opensrp-server'
+    image: 'opensrp/opensrp-server-web:latest'
+    depends_on:
+      - 'postgresql'
+      - 'mariadb'
+    links:
+      - 'postgresql'
+      - 'mariadb'
+    volumes:
+      - '${PWD}/conf/opensrp-server/log4j.xml:/usr/local/tomcat/webapps/opensrp/WEB-INF/classes/log4j.xml:ro'
+      - '${PWD}/conf/opensrp-server/logging.properties:/usr/local/tomcat/conf/logging.properties:ro'
+      - '${PWD}/conf/opensrp-server/keycloak.json:/usr/local/tomcat/webapps/opensrp/WEB-INF/keycloak.json:ro'
+      - '${PWD}/conf/opensrp-server/opensrp.properties:/usr/local/tomcat/webapps/opensrp/WEB-INF/classes/opensrp.properties:ro'
+      - '${PWD}/conf/opensrp-server/context.xml:/usr/local/tomcat/webapps/opensrp/META-INF/context.xml:ro'
+      - '${PWD}/conf/opensrp-server/quartz.properties:/usr/local/tomcat/webapps/opensrp/resources/quartz.properties:ro'
+
+  # mybatis:  #runs database migrations
+  #   container_name: opensrp-schema
+  #   image: 'opensrp/opensrp-server-web:latest'
+  #   command: ["/opt/mybatis/mybatis-migrations-3.3.4/bin/migrate", "up", "--path=/migrations", "--env=deployment"]
+  #   volumes:
+  #     - '${PWD}/conf/opensrp-server/deployment.properties:/migrations/environments/deployment.properties'
+
+  nginx:
+    container_name: 'nginx'
+    image: 'nginx:latest'
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - '${PWD}/data_mounts/nginx_logs:/var/log/nginx:rw'
+      - '${PWD}/conf/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro'
+      - '${PWD}/conf/nginx/password:/etc/nginx/password:ro'
+      - '${PWD}/conf/ssl/:/etc/nginx/ssl/:ro'
+
+  reveal-web:
+    container_name: 'reveal-web'
+    image: 'akros.azurecr.io/akros/reveal-web:126'
+    depends_on:
+      - 'nginx'
+    external_links:
+      - 'nginx:reveal-dev.akros.online'
+      - 'nginx:sso-dev.akros.online'
+      - 'nginx:opensrp-dev.akros.online'
+    volumes:
+      - '${PWD}/conf/reveal-web/env-express-server:/usr/src/app/.env:ro'
+      - '${PWD}/conf/reveal-web/config.js:/usr/src/web/config.js:ro'
+      - '${PWD}/conf/reveal-web/top-logo.png:/usr/src/web/logo.png:ro'
+      - '${PWD}/data_mounts/reveal-web_data:/tmp/express-sessions:rw'
+
+  reveal-etl:
+    container_name: 'reveal-etl'
+    image: 'revealprecision/reveal-etl:4'
+    links:
+      - 'postgresql'
+      - 'redis'
+    volumes:
+      - '${PWD}/conf/etl/etl_processor.conf:/usr/src/app/etl_processor.conf:ro'
+      - '${PWD}/data_mounts/reveal-etl_views:/usr/src/app/custom:ro'
+      - '${PWD}/data_mounts/reveal-etl_logs:/tmp/logs:rw'
+

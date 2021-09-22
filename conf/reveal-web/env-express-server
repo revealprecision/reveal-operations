@@ -1,0 +1,24 @@
+NODE_ENV=development
+
+EXPRESS_OPENSRP_ACCESS_TOKEN_URL=https://sso-dev.akros.online/auth/realms/reveal/protocol/openid-connect/token
+EXPRESS_OPENSRP_AUTHORIZATION_URL=https://sso-dev.akros.online/auth/realms/reveal/protocol/openid-connect/auth
+EXPRESS_OPENSRP_CALLBACK_URL=https://reveal-dev.akros.online/oauth/callback/OpenSRP/
+EXPRESS_OPENSRP_USER_URL=https://opensrp-dev.akros.online/opensrp/user-details
+EXPRESS_OPENSRP_OAUTH_STATE=opensrp
+EXPRESS_OPENSRP_CLIENT_ID=opensrp-server
+EXPRESS_OPENSRP_CLIENT_SECRET=60426e60-221e-40a3-a72a-56aa560ab4d5
+
+EXPRESS_PORT=3000
+EXPRESS_SESSION_NAME=reveal-session
+EXPRESS_SESSION_SECRET=60426e60-221e-40a3-a72a-56aa560ab4d5
+EXPRESS_SESSION_PATH=/
+EXPRESS_REACT_BUILD_PATH=/usr/src/web/
+EXPRESS_SESSION_FILESTORE_PATH=/tmp/express-sessions
+EXPRESS_PRELOADED_STATE_FILE=/tmp/revealState.json
+EXPRESS_SESSION_LOGIN_URL=/login
+EXPRESS_FRONTEND_OPENSRP_CALLBACK_URL=https://reveal-dev.akros.online/fe/oauth/callback/opensrp
+EXPRESS_FRONTEND_LOGIN_URL=/fe/login
+
+EXPRESS_ALLOW_TOKEN_RENEWAL=true
+# time in seconds 3*60*60 = 10800
+EXPRESS_MAXIMUM_SESSION_LIFE_TIME=10800
